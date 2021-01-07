@@ -99,21 +99,30 @@ const SuperCard = ({ material, needLearn }) => {
                 <div>${material.ctime}</div>
               </div>
               <div style="margin-bottom: 4px;">
-                <div>学习等级</div>
+                <div>学习等级：</div>
                 <div>${material.learn.level}</div>
               </div>
               <div style="margin-bottom: 4px;">
-                <div>下一次学习时间</div>
+                <div>下一次学习时间：</div>
                 <div>${material.learn.learnDate}</div>
               </div>
               <div style="margin-bottom: 4px;">
-                <div>当日词频</div>
+                <div>当日词频：</div>
                 <div>${bluesea.forStatisticTodayCount(material)}</div>
               </div>
               <div style="margin-bottom: 4px;">
-                <div>总词频</div>
+                <div>总词频：</div>
                 <div>${bluesea.forStatisticAllCount(material)}</div>
               </div>
+              <div style="margin-bottom: 4px;">
+                <div>添加自：</div>
+                <div>
+                  <a href="${material.addFrom}" target="_blank" onClick=${(e) => {
+                    e.stopPropagation()
+                  }}>${material.addFrom ? "点击此可跳转" : "未知来源"}</a>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -122,7 +131,7 @@ const SuperCard = ({ material, needLearn }) => {
   `;
 };
 
-const ModalLearnCard = ({ visible, onClose, material }) => {
+const ModalLearnCard = ({ visible, onClose, material, allowLearnOperation }) => {
   if (!visible) {
     return '';
   }
@@ -165,7 +174,7 @@ const ModalLearnCard = ({ visible, onClose, material }) => {
       >
         <${SuperCard} material=${material} needLearn=${needLearn} />
 
-        ${needLearn
+        ${(needLearn && allowLearnOperation)
           ? html` <div
               style="
                 display: flex;
@@ -392,6 +401,7 @@ const Material = () => {
   return html`
     <div style="height: 400px; overflow-y: auto; box-sizing: border-box;">
       <${ModalLearnCard}
+        allowLearnOperation=${!config['单词弹幕']}
         visible=${!!selectedMaterial}
         material=${selectedMaterial}
         onClose=${() => {
@@ -481,7 +491,6 @@ const Material = () => {
                         const keys = [
                           'ctime',
                           'learn',
-                          'statistics',
                           'text',
                           'translation',
                           'youdao',
@@ -572,7 +581,40 @@ const Material = () => {
           </div>
         </div>
       </div>
-      <div style="padding: 4px;flex: 1;">
+      <div style="padding: 4px;flex: 1;" onMouseUp=${e => {
+        const target = e.target;
+        if (!target) 
+          return;
+        
+        let indexElement = target;
+        
+        while (indexElement && indexElement.dataset.index === undefined) {
+          indexElement = indexElement.parentElement;
+        }
+        if (indexElement === null)
+          return;
+        const index = parseInt(indexElement.dataset.index)
+        const item = list[index];
+
+        switch (e.button) {
+          case 0: // 左键
+            if(target.dataset.action === "delete") {
+              bluesea.delMaterial(item.text);
+            } else {
+              setSelectedMaterial(item);
+            }
+            break;
+          case 1: // 中键
+            if(item.addFrom) {
+              window.open(item.addFrom, '_blank');
+            } else {
+              // alert("当前单词不存在添加源")
+            }
+            break;
+          default:
+            break;
+        }
+      }}>
         <div style="padding: 4px;border-bottom: 1px solid #ccc;display: flex;">
           <div style="color: #888;">单词词组（${list.length}）</div>
           <div style="flex:1;"></div>
@@ -580,7 +622,7 @@ const Material = () => {
           <div style="color: #888;">复习倒计时</div>
         </div>
 
-        ${list.map((it) => {
+        ${list.map((it, index) => {
           let countdown = 'now';
           const nowDate = dayjs().format();
           if (nowDate < it.learn.learnDate) {
@@ -601,12 +643,9 @@ const Material = () => {
             tabCount: bluesea.forStatisticTabCount(it, tabUrl),
           }[sortRule];
 
-          return html`<div class="word-row">
+          return html`<div class="word-row" data-index="${index}">
             <div
               style="flex: 1;display: flex;"
-              onClick=${() => {
-                setSelectedMaterial(it);
-              }}
             >
               <div style="cursor: default">${it.text}</div>
               <div style="margin-left:16px; font-weight:300; cursor:default;">
@@ -629,11 +668,9 @@ const Material = () => {
             <div class="word-options">
               <span
                 style="color:#f00; margin-left: 8px;"
-                onClick=${() => {
-                  bluesea.delMaterial(it.text);
-                }}
-                >删除</span
-              >
+                data-action="delete"
+              >删除</span
+            >
             </div>
           </div>`;
         })}

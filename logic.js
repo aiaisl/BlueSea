@@ -65,9 +65,11 @@ const defaultConfig = {
   黑名单: [],
   单词弹幕数量上限: 10,
   自动发音: true,
-  中文注解: true,
+  中文注解: false,
   隐藏完成复习的单词: true,
-  单词弹幕速度: 10,
+  单词弹幕速度: 12,
+  有道智云key: '',
+  有道智云appkey: ''
   // 记忆曲线自定义: [],
   // 高亮单词样式: '',
   // 黑名单内标签，将不会激活划词功能
@@ -132,6 +134,8 @@ class BlueSea {
       return l;
     }
   }
+
+
   async setMaterials(l) {
     return materialsDB.set(l);
   }
@@ -154,8 +158,16 @@ class BlueSea {
       learn: this.createLearnObj(),
       // 保留完整数据，后面可能会使用
       youdao,
+      addFrom: location.href,
     };
     return material;
+  }
+
+  async updateMaterialObj(material) {
+    const l = await this.getMaterials();
+    const i = l.findIndex(it => it.text === material.text)
+    l.splice(i, 1, material)
+    await this.setMaterials(l);
   }
 
   async addMaterialObj(material) {
